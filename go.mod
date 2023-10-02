@@ -1,4 +1,4 @@
-module hc
+module github.com/Nitecon/hc
 
 go 1.21
 
