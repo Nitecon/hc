@@ -16,12 +16,7 @@ type Client struct {
 }
 
 func New() *Client {
-	transport := &http2.Transport{
-		AllowHTTP: true,
-	}
-	client := &http.Client{
-		Transport: transport,
-	}
+	client := &http.Client{}
 	return &Client{
 		httpClient: client,
 	}
