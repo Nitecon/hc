@@ -9,6 +9,7 @@ import (
 )
 
 type Client struct {
+	isReadBody bool
 	httpClient *http.Client
 	resp       *http.Response
 	body       []byte
@@ -22,24 +23,32 @@ func New() *Client {
 }
 
 func (c *Client) Get(url string) error {
+	c.isReadBody = false
+	c.body = nil
 	resp, err := c.httpClient.Get(url)
 	c.resp = resp
 	return err
 }
 
 func (c *Client) Post(url string, data []byte) error {
+	c.isReadBody = false
+	c.body = nil
 	resp, err := c.doRequest("POST", url, data)
 	c.resp = resp
 	return err
 }
 
 func (c *Client) Put(url string, data []byte) error {
+	c.isReadBody = false
+	c.body = nil
 	resp, err := c.doRequest("PUT", url, data)
 	c.resp = resp
 	return err
 }
 
 func (c *Client) Delete(url string) error {
+	c.isReadBody = false
+	c.body = nil
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		return err
@@ -87,8 +96,9 @@ func (c *Client) Header() http.Header {
 }
 
 func (c *Client) ReadBody() []byte {
-	if c.body == nil {
+	if c.body == nil && !c.isReadBody {
 		body, err := ReadResponseBody(c.resp)
+		c.isReadBody = true
 		if err != nil {
 			return nil
 		}
@@ -98,8 +108,9 @@ func (c *Client) ReadBody() []byte {
 }
 
 func (c *Client) ReadString() string {
-	if c.body == nil {
+	if c.body == nil && !c.isReadBody {
 		body, err := ReadResponseBody(c.resp)
+		c.isReadBody = true
 		if err != nil {
 			return ""
 		}
@@ -109,8 +120,9 @@ func (c *Client) ReadString() string {
 }
 
 func (c *Client) ReadJson(v interface{}) error {
-	if c.body == nil {
+	if c.body == nil && !c.isReadBody {
 		body, err := ReadResponseBody(c.resp)
+		c.isReadBody = true
 		if err != nil {
 			return err
 		}
