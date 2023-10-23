@@ -10,10 +10,8 @@ import (
 )
 
 type Client struct {
-	isReadBody bool
 	httpClient *http.Client
 	resp       *http.Response
-	body       []byte
 }
 
 func New() *Client {
@@ -23,54 +21,56 @@ func New() *Client {
 	}
 }
 
-func (c *Client) Get(url string) error {
-	c.isReadBody = false
-	c.body = nil
+func (c *Client) Get(url string) ([]byte, error) {
 	resp, err := c.httpClient.Get(url)
+	if err != nil {
+		return nil, err
+	}
 	c.resp = resp
-	return err
+	return ReadResponseBody(resp)
+
 }
 
-func (c *Client) Post(url string, data []byte) error {
-	c.isReadBody = false
-	c.body = nil
+func (c *Client) Post(url string, data []byte) ([]byte, error) {
 	resp, err := c.doRequest("POST", url, data)
-	c.resp = resp
-	return err
+	if err != nil {
+		return nil, err
+	}
+	return ReadResponseBody(resp)
 }
 
-func (c *Client) Put(url string, data []byte) error {
-	c.isReadBody = false
-	c.body = nil
+func (c *Client) Put(url string, data []byte) ([]byte, error) {
 	resp, err := c.doRequest("PUT", url, data)
-	c.resp = resp
-	return err
+	if err != nil {
+		return nil, err
+	}
+	return ReadResponseBody(resp)
 }
 
-func (c *Client) Delete(url string) error {
-	c.isReadBody = false
-	c.body = nil
+func (c *Client) Delete(url string) ([]byte, error) {
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	resp, err := c.httpClient.Do(req)
-	c.resp = resp
-	return err
+	if err != nil {
+		return nil, err
+	}
+	return ReadResponseBody(resp)
 }
 
-func (c *Client) PostJson(url string, data interface{}) error {
+func (c *Client) PostJson(url string, data interface{}) ([]byte, error) {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	return c.Post(url, jsonData)
 }
 
-func (c *Client) PutJson(url string, data interface{}) error {
+func (c *Client) PutJson(url string, data interface{}) ([]byte, error) {
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	return c.Put(url, jsonData)
 }
@@ -96,43 +96,11 @@ func (c *Client) Header() http.Header {
 	return nil
 }
 
-func (c *Client) ReadBody() []byte {
-	if c.body == nil && !c.isReadBody {
-		body, err := ReadResponseBody(c.resp)
-		c.isReadBody = true
-		if err != nil {
-			return nil
-		}
-		c.body = body
-	}
-	return c.body
-}
-
-func (c *Client) ReadString() string {
-	if c.body == nil && !c.isReadBody {
-		body, err := ReadResponseBody(c.resp)
-		c.isReadBody = true
-		if err != nil {
-			return ""
-		}
-		return string(body)
-	}
-	return string(c.body)
-}
-
-func (c *Client) ReadJson(v interface{}) error {
-	if c.body == nil && !c.isReadBody {
-		body, err := ReadResponseBody(c.resp)
-		c.isReadBody = true
-		if err != nil {
-			return err
-		}
-		c.body = body
-	}
-	if c.body == nil {
+func (c *Client) ReadJson(body []byte, v interface{}) error {
+	if body == nil {
 		return fmt.Errorf("body is nil")
 	}
-	return json.Unmarshal(c.body, v)
+	return json.Unmarshal(body, v)
 }
 
 func (c *Client) doRequest(method, url string, data []byte) (*http.Response, error) {
