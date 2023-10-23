@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
-	"golang.org/x/net/http2"
 	"io"
 	"net/http"
 )
