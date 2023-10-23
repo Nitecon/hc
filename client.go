@@ -85,6 +85,35 @@ func (c *Client) StatusText() string {
 	return ""
 }
 
+func (c *Client) Header() http.Header {
+	if c.resp != nil {
+		return c.resp.Header
+	}
+	return nil
+}
+
+func (c *Client) ReadBody() []byte {
+	if c.body == nil {
+		body, err := ReadResponseBody(c.resp)
+		if err != nil {
+			return nil
+		}
+		c.body = body
+	}
+	return c.body
+}
+
+func (c *Client) ReadString() string {
+	if c.body == nil {
+		body, err := ReadResponseBody(c.resp)
+		if err != nil {
+			return ""
+		}
+		return string(body)
+	}
+	return string(c.body)
+}
+
 func (c *Client) ReadJson(v interface{}) error {
 	if c.body == nil {
 		body, err := ReadResponseBody(c.resp)
@@ -97,20 +126,30 @@ func (c *Client) ReadJson(v interface{}) error {
 }
 
 func (c *Client) doRequest(method, url string, data []byte) (*http.Response, error) {
-	var buf bytes.Buffer
-	gz := gzip.NewWriter(&buf)
-	if _, err := gz.Write(data); err != nil {
-		return nil, err
-	}
-	if err := gz.Close(); err != nil {
-		return nil, err
+	// If the data is not empty, compress it.
+	if len(data) > 0 {
+		var buf bytes.Buffer
+		gz := gzip.NewWriter(&buf)
+		if _, err := gz.Write(data); err != nil {
+			return nil, err
+		}
+		if err := gz.Close(); err != nil {
+			return nil, err
+		}
+
+		data = buf.Bytes()
 	}
 
-	req, err := http.NewRequest(method, url, &buf)
+	// Create a bytes.Reader from the compressed data.
+	reader := bytes.NewReader(data)
+
+	// Set the Content-Encoding header to gzip.
+	req, err := http.NewRequest(method, url, reader)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Encoding", "gzip")
+
 	return c.httpClient.Do(req)
 }
 
