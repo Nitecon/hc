@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 )
@@ -127,6 +128,9 @@ func (c *Client) ReadJson(v interface{}) error {
 			return err
 		}
 		c.body = body
+	}
+	if c.body == nil {
+		return fmt.Errorf("body is nil")
 	}
 	return json.Unmarshal(c.body, v)
 }
